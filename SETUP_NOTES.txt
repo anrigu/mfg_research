@@ -1,0 +1,5 @@
+1. Change python version to 3.10.4 in system
+2. Create a venv. If python version isn't changed, venv will be configured as python 3.6.4 and greatlakes will run as 3.10.4, causing version mismatch errors
+3. Add the PYTHONPATH lines from the open_spiel doc to the venv bin/activate
+4. Run the pip install open_spiel and requirements.txt lines in the terminal (in venv)
+5. Run the config script that runs ./install.sh and the build_run tests.

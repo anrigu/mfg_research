@@ -48,6 +48,8 @@ set(GAME_SOURCES
   coordinated_mp/coordinated_mp.h
   crazy_eights/crazy_eights.cc
   crazy_eights/crazy_eights.h
+  crowd_modelling_finite/crowd_modelling.cc
+  crowd_modelling_finite/crowd_modelling.h
   cursor_go/cursor_go.cc
   cursor_go/cursor_go.h
   dark_chess/dark_chess.cc

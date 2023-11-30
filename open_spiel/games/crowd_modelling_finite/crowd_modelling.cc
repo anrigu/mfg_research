@@ -32,6 +32,25 @@ namespace crowd_modelling {
 namespace {
 inline constexpr float kEpsilon = 1e-25;
 
+
+// // Player ids are 0, 1, 2, ...
+// // Negative numbers are used for various special values.
+// enum PlayerId {
+//   // Player 0 is always valid, and is used in single-player games.
+//   kDefaultPlayerId = 0,
+//   // The fixed player id for chance/nature.
+//   kChancePlayerId = -1,
+//   // What is returned as a player id when the game is simultaneous.
+//   kSimultaneousPlayerId = -2,
+//   // Invalid player.
+//   kInvalidPlayer = -3,
+//   // What is returned as the player id on terminal nodes.
+//   kTerminalPlayerId = -4,
+//   // player id of a mean field node
+//   kMeanFieldPlayerId = -5
+// };
+
+
 // Facts about the game.
 const GameType kGameType{/*short_name=*/"finite_crowd_modelling",
                          /*long_name=*/"Finite Game Crowd Modelling",
@@ -40,8 +59,9 @@ const GameType kGameType{/*short_name=*/"finite_crowd_modelling",
                          GameType::Information::kPerfectInformation,
                          GameType::Utility::kGeneralSum,
                          GameType::RewardModel::kRewards,
-                         /*max_num_players=*/kNumPlayers,
-                         /*min_num_players=*/kNumPlayers,
+                         /*max_num_players=kNumPlayers*/,
+                         min_num_players=1,
+                         num_players_=kNumPlayers,
                          /*provides_information_state_string=*/true,
                          /*provides_information_state_tensor=*/false,
                          /*provides_observation_string=*/true,
@@ -56,22 +76,11 @@ std::shared_ptr<const Game> Factory(const GameParameters& params) {
   return std::shared_ptr<const Game>(new CrowdModellingGame(params));
 }
 
-std::string StateToString(int x, int t, Player player_id, bool is_chance_init) {
-  if (is_chance_init) {
-    return "initial";
-  }
-  if (player_id == 0) {
-    return absl::Substitute("($0, $1)", x, t);
-  }
-  if (player_id == kMeanFieldPlayerId) {
-    return absl::Substitute("($0, $1)_a", x, t);
-  }
-  if (player_id == kChancePlayerId) {
-    return absl::Substitute("($0, $1)_a_mu", x, t);
-  }
+std::string StateToString(Player player) {
+  return absl::Substitute(player, player_positions_[player], t_);
+  //Not sure if it'll ever reach here
   SpielFatalError(absl::Substitute(
-      "Unexpected state (player_id: $0, is_chance_init: $1)",
-      player_id, is_chance_init));
+      "Unexpected state - player_id: ", player);
 }
 
 REGISTER_SPIEL_GAME(kGameType, Factory);
@@ -84,28 +93,28 @@ CrowdModellingState::CrowdModellingState(std::shared_ptr<const Game> game,
                                          int size, int horizon)
     : State(game),
       size_(size),
-      horizon_(horizon),
-      distribution_(size_, 1. / size_) {}
+      horizon_(horizon) {
+        joint_action_.resize(num_players_, 0);
+        player_positions_.resize(num_players_, 0);
+        returns_.resize(num_players_, 0);
+      }
 
 CrowdModellingState::CrowdModellingState(
-    std::shared_ptr<const Game> game, int size, int horizon,
-    Player current_player, bool is_chance_init, int x, int t, int last_action,
-    double return_value, const std::vector<double>& distribution)
+    std::shared_ptr<const Game> game, int size, int horizon, 
+    int t)
     : State(game),
       size_(size),
       horizon_(horizon),
-      current_player_(current_player),
-      is_chance_init_(is_chance_init),
-      x_(x),
-      t_(t),
-      last_action_(last_action),
-      return_value_(return_value),
-      distribution_(distribution) {}
+      t_(t){
+        joint_action_.resize(num_players_, 0);
+        player_positions_.resize(num_players_, 0);
+        returns_.resize(num_players_, 0);
+      }
 
+//Come back to look at this
 std::vector<Action> CrowdModellingState::LegalActions() const {
   if (IsTerminal()) return {};
-  if (IsChanceNode()) return LegalChanceOutcomes();
-  if (IsMeanFieldNode()) return {};
+  // if (IsChanceNode()) return LegalChanceOutcomes();
   SPIEL_CHECK_TRUE(IsPlayerNode());
   return {0, 1, 2};
 }
@@ -121,71 +130,62 @@ ActionsAndProbs CrowdModellingState::ChanceOutcomes() const {
   return {{0, 1. / 3}, {1, 1. / 3}, {2, 1. / 3}};
 }
 
-void CrowdModellingState::DoApplyAction(Action action) {
-  SPIEL_CHECK_NE(current_player_, kMeanFieldPlayerId);
-  return_value_ += Rewards()[0];
-  if (is_chance_init_) {
-    SPIEL_CHECK_GE(action, 0);
-    SPIEL_CHECK_LT(action, size_);
-    SPIEL_CHECK_EQ(current_player_, kChancePlayerId);
-    x_ = action;
-    is_chance_init_ = false;
-    current_player_ = 0;
-  } else if (current_player_ == kChancePlayerId) {
-    x_ = (x_ + kActionToMove.at(action) + size_) % size_;
-    ++t_;
-    current_player_ = kMeanFieldPlayerId;
-  } else {
-    SPIEL_CHECK_EQ(current_player_, 0);
-    x_ = (x_ + kActionToMove.at(action) + size_) % size_;
-    last_action_ = action;
-    current_player_ = kChancePlayerId;
+void CrowdModellingState::DoApplyAction(const std::vector<Action>& actions) {
+  SPIEL_CHECK_GE(action, 0);
+  SPIEL_CHECK_LT(action, size_);
+
+  joint_action_ = actions;
+
+  for (auto p = Player{0}; p < num_players_; ++p) {
+    SPIEL_CHECK_LE(p, num_players_);
+    int updatedPosition = (player_positions_[p] + kActionToMove.at(joint_action_[p]) + size_) % size_;
+    player_positions_[p] = updatedPosition;
   }
+  ++t_;
 }
 
 std::string CrowdModellingState::ActionToString(Player player,
                                                 Action action) const {
-  if (IsChanceNode() && is_chance_init_) {
-    return absl::Substitute("init_state=$0", action);
-  }
   return std::to_string(kActionToMove.at(action));
 }
 
-std::vector<std::string> CrowdModellingState::DistributionSupport() {
-  std::vector<std::string> support;
-  support.reserve(size_);
-  for (int x = 0; x < size_; ++x) {
-    support.push_back(StateToString(x, t_, kMeanFieldPlayerId, false));
+std::vector<double> CrowdModellingState::EmpiricalDistribution() {
+  std::vector<double> emp_distribution_(size_, 0.);
+  for (auto p = Player{0}; p < num_players_; ++p) {
+    emp_distribution_[player_positions_[p]]++;
   }
-  return support;
-}
-
-void CrowdModellingState::UpdateDistribution(
-    const std::vector<double>& distribution) {
-  SPIEL_CHECK_EQ(current_player_, kMeanFieldPlayerId);
-  SPIEL_CHECK_EQ(distribution.size(), size_);
-  distribution_ = distribution;
-  current_player_ = kDefaultPlayerId;
+  //Normalize distribution
+  for (int i = 0; i < size_; i++) {
+    emp_distribution_[i] / num_players_;
+  }
+  return emp_distribution_;
 }
 
 bool CrowdModellingState::IsTerminal() const { return t_ >= horizon_; }
 
-std::vector<double> CrowdModellingState::Rewards() const {
-  if (current_player_ != 0) {
-    return {0.};
+double CrowdModellingState::AssignRewards(Player current_player) const {
+  //distance to center (the bar)
+  //max reward: 1
+  double r_x = 1 - 1.0 * std::abs(player_positions_[current_player] - size_ / 2) / (size_ / 2);
+  //cost of action
+  double r_a = -1.0 * std::abs(kActionToMove.at(joint_action_[current_player])) / size_;
+  double r_mu = -std::log(distribution_[player_positions_[current_player]]+kEpsilon);
+  return r_x + r_a + r_mu;
+}
+
+void CrowdModellingState::AssignReturns() {
+  std::vector<int> distribution_ = EmpiricalDistribution();
+  for (auto p = Player{0}; p < num_players_; ++p) {
+    returns_[p] += Rewards(p);
   }
-  double r_x = 1 - 1.0 * std::abs(x_ - size_ / 2) / (size_ / 2);
-  double r_a = -1.0 * std::abs(kActionToMove.at(last_action_)) / size_;
-  double r_mu = -std::log(distribution_[x_]+kEpsilon);
-  return {r_x + r_a + r_mu};
 }
 
 std::vector<double> CrowdModellingState::Returns() const {
-  return {return_value_ + Rewards()[0]};
+  return returns_;
 }
 
-std::string CrowdModellingState::ToString() const {
-  return StateToString(x_, t_, current_player_, is_chance_init_);
+std::string CrowdModellingState::ToString(Player player) const {
+  return StateToString(player_positions_[player], t_, player);
 }
 
 std::string CrowdModellingState::InformationStateString(Player player) const {
@@ -197,37 +197,31 @@ std::string CrowdModellingState::InformationStateString(Player player) const {
 std::string CrowdModellingState::ObservationString(Player player) const {
   SPIEL_CHECK_GE(player, 0);
   SPIEL_CHECK_LT(player, num_players_);
-  return ToString();
+  return ToString(player);
 }
 
 void CrowdModellingState::ObservationTensor(Player player,
                                             absl::Span<float> values) const {
   SPIEL_CHECK_GE(player, 0);
   SPIEL_CHECK_LT(player, num_players_);
+  //size of value is num actions + num time steps + 1 (for initial t = 0)
   SPIEL_CHECK_EQ(values.size(), size_ + horizon_ + 1);
-  SPIEL_CHECK_LT(x_, size_);
+  SPIEL_CHECK_LT(player_positions_[player], size_);
   SPIEL_CHECK_GE(t_, 0);
   // Allow t_ == horizon_.
   SPIEL_CHECK_LE(t_, horizon_);
   std::fill(values.begin(), values.end(), 0.);
-  if (x_ >= 0) {
-    values[x_] = 1.;
+  if (player_positions_[player] >= 0) {
+    values[player_positions_[player]] = 1.;
   }
   // x_ equals -1 for the initial (blank) state, don't set any
   // position bit in that case.
+  // Current timestep
   values[size_ + t_] = 1.;
 }
 
 std::unique_ptr<State> CrowdModellingState::Clone() const {
   return std::unique_ptr<State>(new CrowdModellingState(*this));
-}
-
-std::string CrowdModellingState::Serialize() const {
-  std::string out =
-      absl::StrCat(current_player_, ",", is_chance_init_, ",", x_, ",", t_, ",",
-                   last_action_, ",", return_value_, "\n");
-  absl::StrAppend(&out, absl::StrJoin(distribution_, ","));
-  return out;
 }
 
 CrowdModellingGame::CrowdModellingGame(const GameParameters& params)
@@ -238,44 +232,6 @@ CrowdModellingGame::CrowdModellingGame(const GameParameters& params)
 std::vector<int> CrowdModellingGame::ObservationTensorShape() const {
   // +1 to allow for t_ == horizon.
   return {size_ + horizon_ + 1};
-}
-
-std::unique_ptr<State> CrowdModellingGame::DeserializeState(
-    const std::string& str) const {
-  std::vector<std::string> lines = absl::StrSplit(str, '\n');
-  if (lines.size() != 2) {
-    SpielFatalError(absl::StrCat("Expected 2 lines in serialized state, got: ",
-                                 lines.size()));
-  }
-  Player current_player;
-  int is_chance_init;
-  int x;
-  int t;
-  int last_action;
-  double return_value;
-  std::vector<std::string> properties = absl::StrSplit(lines[0], ',');
-  if (properties.size() != 6) {
-    SpielFatalError(
-        absl::StrCat("Expected 6 properties for serialized state, got: ",
-                     properties.size()));
-  }
-  SPIEL_CHECK_TRUE(absl::SimpleAtoi(properties[0], &current_player));
-  SPIEL_CHECK_TRUE(absl::SimpleAtoi(properties[1], &is_chance_init));
-  SPIEL_CHECK_TRUE(absl::SimpleAtoi(properties[2], &x));
-  SPIEL_CHECK_TRUE(absl::SimpleAtoi(properties[3], &t));
-  SPIEL_CHECK_TRUE(absl::SimpleAtoi(properties[4], &last_action));
-  SPIEL_CHECK_TRUE(absl::SimpleAtod(properties[5], &return_value));
-  std::vector<std::string> serialized_distrib = absl::StrSplit(lines[1], ',');
-  std::vector<double> distribution;
-  distribution.reserve(serialized_distrib.size());
-  for (std::string& v : serialized_distrib) {
-    double parsed_weight;
-    SPIEL_CHECK_TRUE(absl::SimpleAtod(v, &parsed_weight));
-    distribution.push_back(parsed_weight);
-  }
-  return absl::make_unique<CrowdModellingState>(
-      shared_from_this(), size_, horizon_, current_player, is_chance_init, x, t,
-      last_action, return_value, distribution);
 }
 
 }  // namespace crowd_modelling

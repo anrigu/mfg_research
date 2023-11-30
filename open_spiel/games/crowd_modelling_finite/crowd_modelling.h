@@ -62,20 +62,16 @@ class CrowdModellingState : public State {
  public:
   CrowdModellingState(std::shared_ptr<const Game> game, int size, int horizon);
   CrowdModellingState(std::shared_ptr<const Game> game, int size, int horizon,
-                      Player current_player, bool is_chance_init, int x, int t,
-                      int last_action, double return_value,
-                      const std::vector<double>& distribution);
+                      int t);
 
   CrowdModellingState(const CrowdModellingState&) = default;
   CrowdModellingState& operator=(const CrowdModellingState&) = default;
 
-  Player CurrentPlayer() const override {
-    return IsTerminal() ? kTerminalPlayerId : current_player_;
-  }
   std::string ActionToString(Player player, Action action) const override;
   std::string ToString() const override;
   bool IsTerminal() const override;
-  std::vector<double> Rewards() const override;
+  double AssignRewards(Player CurrentPlayer) const;
+  void AssignReturns();
   std::vector<double> Returns() const override;
   std::string InformationStateString(Player player) const override;
   std::string ObservationString(Player player) const override;
@@ -85,33 +81,24 @@ class CrowdModellingState : public State {
   std::vector<Action> LegalActions() const override;
   ActionsAndProbs ChanceOutcomes() const override;
 
-  std::vector<std::string> DistributionSupport() override;
-  void UpdateDistribution(const std::vector<double>& distribution) override;
-  std::vector<double> Distribution() const { return distribution_; }
-
-  std::string Serialize() const override;
-
  protected:
-  void DoApplyAction(Action action) override;
+  void DoApplyActions(const std::vector<Action>& actions) override;
 
  private:
   // Size of the circle.
   const int size_ = -1;
   const int horizon_ = -1;
-  Player current_player_ = kChancePlayerId;
-  bool is_chance_init_ = true;
-  // Position on the circle [0, size_) when valid.
-  int x_ = -1;
   // Current time, in [0, horizon_].
   int t_ = 0;
-  int last_action_ = kNeutralAction;
-  double return_value_ = 0.;
+  std::vector<double> returns_;
+
+  std::vector<Action> joint_action_;  // The action taken by all the players.
+  std::vector<int> player_positions_;
 
   // kActionToMove[action] is the displacement on the circle of the game for
   // 'action'.
   static constexpr std::array<int, 3> kActionToMove = {-1, 0, 1};
-  // Represents the current probability distribution over game states.
-  std::vector<double> distribution_;
+
 };
 
 class CrowdModellingGame : public Game {
@@ -134,12 +121,12 @@ class CrowdModellingGame : public Game {
     // + 1 to account for the initial extra chance node.
     return horizon_ + 1;
   }
+  
+
   std::vector<int> ObservationTensorShape() const override;
   int MaxChanceOutcomes() const override {
     return std::max(size_, kNumChanceActions);
   }
-  std::unique_ptr<State> DeserializeState(
-      const std::string& str) const override;
 
  private:
   const int size_;

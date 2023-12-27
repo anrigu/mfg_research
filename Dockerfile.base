@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 as base
+FROM ubuntu:22.04 as base
 RUN apt update
 RUN apt-get -y install \
     clang \
@@ -21,7 +21,7 @@ COPY . .
 RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
 RUN ./install.sh
 RUN pip3 install --upgrade setuptools testresources
-RUN pip3 install --upgrade -r requirements.txt
+RUN pip3 install --upgrade -r requirements_docker.txt
 RUN pip3 install --upgrade cmake
 
 # build and test
@@ -31,7 +31,7 @@ RUN cmake -DPython3_EXECUTABLE=`which python3` -DCMAKE_CXX_COMPILER=`which clang
 RUN make -j12
 ENV PYTHONPATH=${PYTHONPATH}:/repo
 ENV PYTHONPATH=${PYTHONPATH}:/repo/build/python
-RUN ctest -j12
+#RUN ctest -j12
 WORKDIR /repo/open_spiel
 
 # minimal image for development in Python

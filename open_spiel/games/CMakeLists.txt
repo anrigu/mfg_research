@@ -48,8 +48,6 @@ set(GAME_SOURCES
   coordinated_mp/coordinated_mp.h
   crazy_eights/crazy_eights.cc
   crazy_eights/crazy_eights.h
-  crowd_modelling_finite/crowd_modelling.cc
-  crowd_modelling_finite/crowd_modelling.h
   cursor_go/cursor_go.cc
   cursor_go/cursor_go.h
   dark_chess/dark_chess.cc
@@ -74,6 +72,8 @@ set(GAME_SOURCES
   efg_game/efg_game_data.h
   euchre/euchre.cc
   euchre/euchre.h
+  finite_crowd_modelling/finite_crowd_modelling.cc
+  finite_crowd_modelling/finite_crowd_modelling.h
   first_sealed_auction/first_sealed_auction.cc
   first_sealed_auction/first_sealed_auction.h
   gin_rummy/gin_rummy.cc

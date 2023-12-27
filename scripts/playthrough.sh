@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --mem-per-cpu=10g
+#SBATCH --mem-per-cpu=5g
 #SBATCH --account=wellman98
 ​
 echo "Job Id listed below:"
@@ -22,5 +22,4 @@ module load gcc
 cd ~/mfg_research/open_spiel/
 # python3 -m pip install open_spiel
 # python3 -m pip install -r requirements.txt
-# ./install.sh
-./open_spiel/scripts/build_and_run_tests.sh
+./open_spiel/scripts/generate_new_playthrough.sh finite_crowd_modelling

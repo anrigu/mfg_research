@@ -84,6 +84,12 @@ class MergedPolicy(policy_std.Policy):
         1.0), (f'Weights should sum to 1, but instead sum to {sum(weights)}')
 
   def action_probabilities(self, state, player_id=None):
+    """
+      Calculates the policy generating the distribution for the next time step 
+      Corresponds to equation at bottom of page 3 of Fictitious Play for Mean Field Games Paper (Perrin)
+
+      Returns: Dictionary of each of the action probabilities given a current state
+    """
     action_prob = []
     legal = state.legal_actions()
     num_legal = len(legal)
@@ -92,12 +98,15 @@ class MergedPolicy(policy_std.Policy):
       norm_merged_pi = 0.0
       for p, d, w in zip(self._policies, self._distributions, self._weights):
         try:
+          #Merged policy = probability of taking action a (numerator)
           merged_pi += w * d(state) * p(state)[a]
+          #Norm merged policy = probability of ending up in state given past state distributions (denominator in equation in MfgFictPlay paper)
           norm_merged_pi += w * d(state)
         except (KeyError, ValueError):
           # This happens when the state was not observed in the merged
           # distributions or policies.
           pass
+      #If prob ending up in state is > 0 (i.e. it's possible)
       if norm_merged_pi > 0.0:
         action_prob.append((a, merged_pi / norm_merged_pi))
       else:
@@ -138,11 +147,15 @@ class FictitiousPlay(object):
       br_policy: Policy to compute the best response value for each iteration.
         If none provided, the exact value is computed.
       learning_rate: The learning rate.
+    
+
+    Self-comments: One iteration of FP.
     """
     self._fp_step += 1
 
     distrib = distribution.DistributionPolicy(self._game, self._policy)
 
+    #Calculate a BR against the distribution at current time-step.
     if br_policy:
       br_value = policy_value.PolicyValue(self._game, distrib, br_policy)
     else:
@@ -159,8 +172,10 @@ class FictitiousPlay(object):
                                         self._temperature, br_value)
     pi = pi.to_tabular()
 
+    #State distribution given that the player plays BR policy against crowd following previous policy (built off of distrib on line 156)
     distrib_pi = distribution.DistributionPolicy(self._game, pi)
 
+    #Merged policy: Equation at bottom of page 3 of MFG_FP paper. We subsitute the hardcoded 1/iterations to a custom learning rate that can be set.
     if learning_rate:
       weight = learning_rate
     else:
@@ -169,6 +184,7 @@ class FictitiousPlay(object):
     if math.isclose(weight, 1.0):
       self._policy = pi
     else:
+      #weight the distrib 1-weight and the new distribution weight
       self._policy = MergedPolicy(self._game, player_ids, [self._policy, pi],
                                   [distrib, distrib_pi],
                                   [1.0 - weight, weight]).to_tabular()

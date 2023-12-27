@@ -1,0 +1,144 @@
+game: finite_crowd_modelling
+
+GameType.chance_mode = ChanceMode.EXPLICIT_STOCHASTIC
+GameType.dynamics = Dynamics.SIMULTANEOUS
+GameType.information = Information.PERFECT_INFORMATION
+GameType.long_name = "Finite Player Crowd Modelling"
+GameType.max_num_players = 10
+GameType.min_num_players = 2
+GameType.parameter_specification = ["horizon", "init_pos_random", "players", "size", "target_move_prob"]
+GameType.provides_information_state_string = True
+GameType.provides_information_state_tensor = False
+GameType.provides_observation_string = True
+GameType.provides_observation_tensor = True
+GameType.provides_factored_observation_string = False
+GameType.reward_model = RewardModel.REWARDS
+GameType.short_name = "finite_crowd_modelling"
+GameType.utility = Utility.GENERAL_SUM
+
+NumDistinctActions() = 3
+PolicyTensorShape() = [3]
+MaxChanceOutcomes() = 0
+GetParameters() = {horizon=10,init_pos_random=False,players=2,size=10,target_move_prob=1.0}
+NumPlayers() = 2
+MinUtility() = -inf
+MaxUtility() = inf
+UtilitySum() = None
+ObservationTensorShape() = [21]
+ObservationTensorLayout() = TensorLayout.CHW
+ObservationTensorSize() = 21
+MaxGameLength() = 10
+ToString() = "finite_crowd_modelling()"
+
+# State 0
+IsTerminal() = False
+History() = []
+HistoryString() = ""
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = -2
+InformationStateString(0) = ""
+InformationStateString(1) = ""
+ObservationString(0) = "(0, 0, 0)"
+ObservationString(1) = "(1, 0, 0)"
+ObservationTensor(0): ◉◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯
+ObservationTensor(1): ◉◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["P0 A: -1", "P0 A: 0", "P0 A: 1"]
+StringLegalActions(1) = ["P1 A: -1", "P1 A: 0", "P1 A: 1"]
+
+# Apply joint action ["P0 A: 0", "P1 A: 0"]
+actions: [1, 1]
+
+# State 1
+IsTerminal() = False
+History() = [1, 1]
+HistoryString() = "1, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = -2
+InformationStateString(0) = "1, 1"
+InformationStateString(1) = "1, 1"
+ObservationString(0) = "(0, 0, 1)"
+ObservationString(1) = "(1, 0, 1)"
+ObservationTensor(0): ◉◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯
+ObservationTensor(1): ◉◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["P0 A: -1", "P0 A: 0", "P0 A: 1"]
+StringLegalActions(1) = ["P1 A: -1", "P1 A: 0", "P1 A: 1"]
+
+# Apply joint action ["P0 A: 0", "P1 A: 0"]
+actions: [1, 1]
+
+# State 2
+IsTerminal() = False
+History() = [1, 1, 1, 1]
+HistoryString() = "1, 1, 1, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = -2
+InformationStateString(0) = "1, 1, 1, 1"
+InformationStateString(1) = "1, 1, 1, 1"
+ObservationString(0) = "(0, 0, 2)"
+ObservationString(1) = "(1, 0, 2)"
+ObservationTensor(0): ◉◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯
+ObservationTensor(1): ◉◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [-0.405465, -0.405465]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["P0 A: -1", "P0 A: 0", "P0 A: 1"]
+StringLegalActions(1) = ["P1 A: -1", "P1 A: 0", "P1 A: 1"]
+
+# Apply joint action ["P0 A: 1", "P1 A: 0"]
+actions: [2, 1]
+
+# State 3
+# Apply joint action ["P0 A: 1", "P1 A: 0"]
+actions: [2, 1]
+
+# State 4
+# Apply joint action ["P0 A: 0", "P1 A: 1"]
+actions: [1, 2]
+
+# State 5
+# Apply joint action ["P0 A: -1", "P1 A: 1"]
+actions: [0, 2]
+
+# State 6
+# Apply joint action ["P0 A: 1", "P1 A: -1"]
+actions: [2, 0]
+
+# State 7
+# Apply joint action ["P0 A: -1", "P1 A: 1"]
+actions: [0, 2]
+
+# State 8
+# Apply joint action ["P0 A: 1", "P1 A: -1"]
+actions: [2, 0]
+
+# State 9
+# Apply joint action ["P0 A: 0", "P1 A: -1"]
+actions: [1, 0]
+
+# State 10
+IsTerminal() = True
+History() = [1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 0, 2, 2, 0, 0, 2, 2, 0, 1, 0]
+HistoryString() = "1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 0, 2, 2, 0, 0, 2, 2, 0, 1, 0"
+IsChanceNode() = False
+IsSimultaneousNode() = False
+CurrentPlayer() = -4
+InformationStateString(0) = "1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 0, 2, 2, 0, 0, 2, 2, 0, 1, 0"
+InformationStateString(1) = "1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 0, 2, 2, 0, 0, 2, 2, 0, 1, 0"
+ObservationString(0) = "(0, 2, 10)"
+ObservationString(1) = "(1, 0, 10)"
+ObservationTensor(0): ◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉
+ObservationTensor(1): ◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉
+Rewards() = [3.61229, 1.46964]
+Returns() = [3.61229, 1.46964]

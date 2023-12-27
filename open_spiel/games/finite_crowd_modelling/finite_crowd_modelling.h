@@ -23,26 +23,32 @@
 // placed at a fixed location in the circle, and penalties for moving and for
 // being in a crowded place.
 
-#ifndef OPEN_SPIEL_GAMES_MFG_CROWD_MODELLING_H_
-#define OPEN_SPIEL_GAMES_MFG_CROWD_MODELLING_H_
+#ifndef OPEN_SPIEL_GAMES_FINITE_CROWD_MODELLING_H_
+#define OPEN_SPIEL_GAMES_FINITE_CROWD_MODELLING_H_
 
 #include <array>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <random>
 
 #include "open_spiel/abseil-cpp/absl/memory/memory.h"
+#include "open_spiel/simultaneous_move_game.h"
 #include "open_spiel/spiel.h"
 
 namespace open_spiel {
-namespace crowd_modelling {
+namespace finite_crowd_modelling {
 
-inline constexpr int kNumPlayers = 1;
+inline constexpr int kNumPlayers = 5;
 inline constexpr int kDefaultHorizon = 10;
 inline constexpr int kDefaultSize = 10;
 inline constexpr int kNumActions = 3;
 inline constexpr int kNumChanceActions = 3;
+inline constexpr int kDefaultPlayers = 2;
+inline constexpr bool kInitRandomPos = false;
+inline constexpr double kTargetMoveProb = 1;
 // Action that leads to no displacement on the circle of the game.
 inline constexpr int kNeutralAction = 1;
 
@@ -58,19 +64,22 @@ inline constexpr int kNeutralAction = 1;
 // 3. Chance node, where one of {left, neutral, right} actions is externally
 //    selected.
 // The game stops after a non-initial chance node when the horizon is reached.
-class CrowdModellingState : public State {
+class FiniteCrowdModellingState : public SimMoveState {
  public:
-  CrowdModellingState(std::shared_ptr<const Game> game, int size, int horizon);
-  CrowdModellingState(std::shared_ptr<const Game> game, int size, int horizon,
-                      int t);
+  FiniteCrowdModellingState(std::shared_ptr<const Game> game, int num_players_, int size, int horizon, 
+                      bool init_pos_random, double target_move_prob);
+  FiniteCrowdModellingState(std::shared_ptr<const Game> game, int num_players_, int size, int horizon,
+                      int t, bool init_pos_random, double target_move_prob);
 
-  CrowdModellingState(const CrowdModellingState&) = default;
-  CrowdModellingState& operator=(const CrowdModellingState&) = default;
+  FiniteCrowdModellingState(const FiniteCrowdModellingState&) = default;
+
+  std::string ToString() const override;
+  FiniteCrowdModellingState& operator=(const FiniteCrowdModellingState&) = default;
 
   std::string ActionToString(Player player, Action action) const override;
-  std::string ToString() const override;
+  std::string ToString(Player player) const;
   bool IsTerminal() const override;
-  double AssignRewards(Player CurrentPlayer) const;
+  double AssignRewards(Player current_player) const;
   void AssignReturns();
   std::vector<double> Returns() const override;
   std::string InformationStateString(Player player) const override;
@@ -78,20 +87,31 @@ class CrowdModellingState : public State {
   void ObservationTensor(Player player,
                          absl::Span<float> values) const override;
   std::unique_ptr<State> Clone() const override;
-  std::vector<Action> LegalActions() const override;
+  std::vector<Action> LegalActions(Player player) const override;
   ActionsAndProbs ChanceOutcomes() const override;
+  void EmpiricalDistribution();
+  Player CurrentPlayer() const override {
+    return IsTerminal() ? kTerminalPlayerId : kSimultaneousPlayerId;
+  }
 
  protected:
   void DoApplyActions(const std::vector<Action>& actions) override;
 
  private:
+  const int num_players_ = -1;
   // Size of the circle.
   const int size_ = -1;
+  // Max time step
   const int horizon_ = -1;
+  //Prob that action not affected by noise
+  const double target_move_prob_ = 1;
+  const double noise_move_prob = (1-target_move_prob_) / 2;
+  const bool init_pos_random_;
   // Current time, in [0, horizon_].
   int t_ = 0;
+  std::vector<double> emp_distribution_;
   std::vector<double> returns_;
-
+  
   std::vector<Action> joint_action_;  // The action taken by all the players.
   std::vector<int> player_positions_;
 
@@ -101,15 +121,15 @@ class CrowdModellingState : public State {
 
 };
 
-class CrowdModellingGame : public Game {
+class FiniteCrowdModellingGame : public Game {
  public:
-  explicit CrowdModellingGame(const GameParameters& params);
+  explicit FiniteCrowdModellingGame(const GameParameters& params);
   int NumDistinctActions() const override { return kNumActions; }
   std::unique_ptr<State> NewInitialState() const override {
-    return absl::make_unique<CrowdModellingState>(shared_from_this(), size_,
-                                                  horizon_);
+    return absl::make_unique<FiniteCrowdModellingState>(shared_from_this(), num_players_, size_,
+                                                  horizon_, init_pos_random_, target_move_prob_);
   }
-  int NumPlayers() const override { return kNumPlayers; }
+  int NumPlayers() const override { return num_players_; }
   double MinUtility() const override {
     return -std::numeric_limits<double>::infinity();
   }
@@ -124,16 +144,19 @@ class CrowdModellingGame : public Game {
   
 
   std::vector<int> ObservationTensorShape() const override;
-  int MaxChanceOutcomes() const override {
-    return std::max(size_, kNumChanceActions);
-  }
+  // int MaxChanceOutcomes() const override {
+  //   return std::max(size_, kNumChanceActions);
+  // }
 
  private:
   const int size_;
   const int horizon_;
+  const int num_players_;
+  const bool init_pos_random_;
+  const double target_move_prob_;
 };
 
-}  // namespace crowd_modelling
+}  // namespace finite_crowd_modelling
 }  // namespace open_spiel
 
-#endif  // OPEN_SPIEL_GAMES_MFG_CROWD_MODELLING_H_
+#endif  // OPEN_SPIEL_GAMES_FINITE_CROWD_MODELLING_H_

@@ -56,6 +56,7 @@ EXPECTED_GAMES = frozenset([
     "dou_dizhu",
     "efg_game",
     "euchre",
+    "finite_crowd_modelling",
     "first_sealed_auction",
     "gin_rummy",
     "go",
@@ -190,6 +191,7 @@ class PyspielTest(absltest.TestCase):
     self.assertEqual(game_list["kuhn_poker"].utility,
                      pyspiel.GameType.Utility.ZERO_SUM)
     self.assertEqual(game_list["kuhn_poker"].min_num_players, 2)
+    self.assertEqual(game_list["finite_crowd_modelling"].dynamics, pyspiel.GameType.Dynamics.SIMULTANEOUS)
 
   def test_create_game(self):
     game = pyspiel.load_game("kuhn_poker")

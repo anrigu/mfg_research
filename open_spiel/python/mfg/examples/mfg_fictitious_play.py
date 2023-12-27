@@ -63,6 +63,7 @@ def main(argv: Sequence[str]) -> None:
   for it in range(FLAGS.num_iterations):
     fp.iteration(learning_rate=learning_rate)
     fp_policy = fp.get_policy()
+    writer.write_scalars(it, {'policy':fp_policy})
     nash_conv_fp = nash_conv.NashConv(game, fp_policy)
     exploitability = nash_conv_fp.nash_conv()
     writer.write_scalars(it, {'exploitability': exploitability})

@@ -20,5 +20,7 @@ pip install tensorflow
 pip install matplotlib
 
 cd ~/mfg_research/open_spiel/
-
-python3 open_spiel/python/examples/example.py --game=breakthrough
+# python3 -m pip install open_spiel
+# python3 -m pip install -r requirements.txt
+./install.sh
+./open_spiel/scripts/build_and_run_tests.sh
